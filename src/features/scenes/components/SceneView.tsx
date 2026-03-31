@@ -1,8 +1,10 @@
 import { View, useWindowDimensions } from "react-native";
 import { useCallback } from "react";
+import * as Haptics from "expo-haptics";
 import { SceneHotspotButton } from "./SceneHotspotButton";
 import * as ttsService from "@/features/tts/ttsService";
 import { useSentenceStore } from "@/shared/hooks/useSentenceStore";
+import { recordSymbolUsage } from "@/db/queries/usageQueries";
 import { getSymbolImageUrl } from "@/features/symbols/arasaacApi";
 import type { Scene, SceneHotspot, SentenceSymbol } from "@/shared/types";
 
@@ -14,11 +16,12 @@ export function SceneView({ scene }: SceneViewProps) {
   const { width, height } = useWindowDimensions();
   const addSymbol = useSentenceStore((s) => s.addSymbol);
 
-  const sceneHeight = height - 160; // account for header, sentence strip, tab bar
-  const sceneWidth = width - 24; // horizontal padding
+  const sceneHeight = height - 160;
+  const sceneWidth = width - 24;
 
   const handleHotspotPress = useCallback(
     (hotspot: SceneHotspot) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const text = hotspot.vocalization ?? hotspot.label;
       ttsService.speak(text);
 
@@ -29,6 +32,7 @@ export function SceneView({ scene }: SceneViewProps) {
         imagePath: getSymbolImageUrl(hotspot.arasaacId),
       };
       addSymbol(sentenceSymbol);
+      recordSymbolUsage(hotspot.id).catch(() => {});
     },
     [addSymbol]
   );

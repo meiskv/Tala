@@ -5,6 +5,7 @@ export interface TTSOptions {
   rate?: number;
   pitch?: number;
   language?: string;
+  voice?: string;
 }
 
 function getStoredOptions(): TTSOptions {
@@ -12,6 +13,7 @@ function getStoredOptions(): TTSOptions {
     rate: storage.getNumber(StorageKeys.TTS_RATE) ?? 1.0,
     pitch: storage.getNumber(StorageKeys.TTS_PITCH) ?? 1.0,
     language: storage.getString(StorageKeys.TTS_LANGUAGE) ?? "en-US",
+    voice: storage.getString(StorageKeys.TTS_VOICE) ?? undefined,
   };
 }
 
@@ -23,6 +25,7 @@ export function speak(text: string, options?: TTSOptions): void {
     rate: merged.rate,
     pitch: merged.pitch,
     language: merged.language,
+    voice: merged.voice,
   });
 }
 

@@ -9,4 +9,5 @@ export interface SentenceSymbol {
   label: string;
   vocalization: string;
   imagePath: string | null;
+  categoryColor?: string;
 }

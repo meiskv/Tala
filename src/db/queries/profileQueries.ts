@@ -48,8 +48,29 @@ export async function insertProfile(profile: UserProfile): Promise<void> {
   );
 }
 
+export async function getAllProfiles(): Promise<UserProfile[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<ProfileRow>(
+    "SELECT * FROM user_profiles ORDER BY name ASC"
+  );
+  return rows.map(rowToProfile);
+}
+
 export async function setActiveProfile(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("UPDATE user_profiles SET is_active = 0 WHERE is_active = 1");
   await db.runAsync("UPDATE user_profiles SET is_active = 1 WHERE id = ?", [id]);
+}
+
+export async function updateProfile(profile: UserProfile): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE user_profiles SET name = ?, age_group = ?, complexity_level = ?, grid_rows = ?, grid_cols = ? WHERE id = ?",
+    [profile.name, profile.ageGroup, profile.complexityLevel, profile.gridRows, profile.gridCols, profile.id]
+  );
+}
+
+export async function deleteProfile(id: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM user_profiles WHERE id = ?", [id]);
 }
