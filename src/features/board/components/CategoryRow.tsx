@@ -1,8 +1,10 @@
 import { FlatList, Text, View, useWindowDimensions } from "react-native";
 import { useCallback, useMemo } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { SymbolButton } from "@/shared/components/SymbolButton";
 import { useSentenceStore } from "@/shared/hooks/useSentenceStore";
+import { useColors } from "@/shared/hooks/useColors";
+import { recordSymbolUsage } from "@/db/queries/usageQueries";
 import type { Category, SentenceSymbol } from "@/shared/types";
 import type { ButtonWithImage } from "@/db/queries/buttonQueries";
 import * as ttsService from "@/features/tts/ttsService";
@@ -10,6 +12,7 @@ import * as ttsService from "@/features/tts/ttsService";
 interface CategoryRowProps {
   category: Category;
   buttons: ButtonWithImage[];
+  onSymbolTap?: () => void;
 }
 
 const CARD_GAP = 8;
@@ -17,25 +20,25 @@ const ROW_PADDING_H = 12;
 const LABEL_HEIGHT = 32;
 
 function toLightTint(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  // Mix with white at ~75% to get a 200-scale pastel
+  const clean = hex.startsWith("#") ? hex : "#9E9E9E";
+  const r = parseInt(clean.slice(1, 3), 16);
+  const g = parseInt(clean.slice(3, 5), 16);
+  const b = parseInt(clean.slice(5, 7), 16);
   const lr = Math.round(r + (255 - r) * 0.75);
   const lg = Math.round(g + (255 - g) * 0.75);
   const lb = Math.round(b + (255 - b) * 0.75);
   return `rgb(${lr}, ${lg}, ${lb})`;
 }
 
-export function CategoryRow({ category, buttons }: CategoryRowProps) {
+export function CategoryRow({ category, buttons, onSymbolTap }: CategoryRowProps) {
   const { height } = useWindowDimensions();
+  const colors = useColors();
   const addSymbol = useSentenceStore((s) => s.addSymbol);
 
-  // Calculate card size based on fitting ~3 rows in the visible area
   const lightBg = useMemo(() => toLightTint(category.color), [category.color]);
 
   const cardSize = useMemo(() => {
-    const availableHeight = height - 72 - 60; // minus sentence strip and tab bar
+    const availableHeight = height - 72 - 60;
     const rowHeight = (availableHeight - LABEL_HEIGHT * 3) / 3;
     return Math.min(Math.floor(rowHeight - CARD_GAP), 88);
   }, [height]);
@@ -43,17 +46,21 @@ export function CategoryRow({ category, buttons }: CategoryRowProps) {
   const handlePress = useCallback(
     (button: ButtonWithImage) => {
       if (button.action === "speak") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const sentenceSymbol: SentenceSymbol = {
           symbolId: button.symbolId ?? button.id,
           label: button.label,
           vocalization: button.vocalization ?? button.label,
           imagePath: button.imagePath,
+          categoryColor: category.color,
         };
         addSymbol(sentenceSymbol);
         ttsService.speak(button.vocalization ?? button.label);
+        recordSymbolUsage(button.symbolId ?? button.id).catch(() => {});
+        onSymbolTap?.();
       }
     },
-    [addSymbol]
+    [addSymbol, category.color, onSymbolTap]
   );
 
   return (
@@ -79,7 +86,7 @@ export function CategoryRow({ category, buttons }: CategoryRowProps) {
           style={{
             fontSize: 14,
             fontWeight: "700",
-            color: "#444",
+            color: colors.text,
           }}
         >
           {category.name}

@@ -7,6 +7,10 @@ export const StorageKeys = {
   TTS_RATE: "ttsRate",
   TTS_PITCH: "ttsPitch",
   TTS_LANGUAGE: "ttsLanguage",
+  TTS_VOICE: "ttsVoice",
   LAST_BOARD_ID: "lastBoardId",
   HAS_SEEDED: "hasSeeded",
+  HAS_ONBOARDED: "hasOnboarded",
+  DARK_MODE: "darkMode",
+  ORIENTATION_LOCK: "orientationLock",
 } as const;

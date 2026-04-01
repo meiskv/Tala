@@ -1,9 +1,11 @@
 import { FlatList, useWindowDimensions, View } from "react-native";
 import { useMemo, useCallback } from "react";
+import * as Haptics from "expo-haptics";
 import { SymbolButton } from "@/shared/components/SymbolButton";
 import { useBoardStore } from "@/shared/hooks/useBoardStore";
 import { useSentenceStore } from "@/shared/hooks/useSentenceStore";
 import { useProfileStore } from "@/shared/hooks/useProfileStore";
+import { recordSymbolUsage } from "@/db/queries/usageQueries";
 import type { SentenceSymbol } from "@/shared/types";
 import type { ButtonWithImage } from "@/db/queries/buttonQueries";
 import * as ttsService from "@/features/tts/ttsService";
@@ -36,6 +38,7 @@ export function SymbolGrid() {
   const handlePress = useCallback(
     (button: ButtonWithImage) => {
       if (button.action === "speak") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const sentenceSymbol: SentenceSymbol = {
           symbolId: button.symbolId ?? button.id,
           label: button.label,
@@ -44,6 +47,7 @@ export function SymbolGrid() {
         };
         addSymbol(sentenceSymbol);
         ttsService.speak(button.vocalization ?? button.label);
+        recordSymbolUsage(button.symbolId ?? button.id).catch(() => {});
       }
     },
     [addSymbol]

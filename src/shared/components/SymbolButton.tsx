@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { useColors } from "@/shared/hooks/useColors";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -23,6 +24,7 @@ export function SymbolButton({
   size,
   onPress,
 }: SymbolButtonProps) {
+  const colors = useColors();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -49,7 +51,7 @@ export function SymbolButton({
         {
           width: size,
           height: size,
-          backgroundColor: bgColor ?? "#F5F5F5",
+          backgroundColor: bgColor ?? colors.card,
           borderRadius: 12,
           alignItems: "center",
           justifyContent: "center",
@@ -71,13 +73,13 @@ export function SymbolButton({
           style={{
             width: imageSize,
             height: imageSize,
-            backgroundColor: "#E0E0E0",
+            backgroundColor: colors.border,
             borderRadius: 8,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text style={{ fontSize: imageSize * 0.4, color: "#999" }}>?</Text>
+          <Text style={{ fontSize: imageSize * 0.4, color: colors.textTertiary }}>?</Text>
         </View>
       )}
       <Text
@@ -85,7 +87,7 @@ export function SymbolButton({
         style={{
           fontSize: Math.max(10, size * 0.12),
           fontWeight: "600",
-          color: "#333",
+          color: colors.text,
           marginTop: 2,
           textAlign: "center",
         }}

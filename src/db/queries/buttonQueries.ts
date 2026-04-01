@@ -43,6 +43,31 @@ export async function getButtonsByBoardId(boardId: string): Promise<ButtonWithIm
   }));
 }
 
+export async function searchButtons(query: string): Promise<ButtonWithImage[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<ButtonWithImageRow>(
+    `SELECT b.*, s.arasaac_id
+     FROM buttons b
+     LEFT JOIN symbols s ON b.symbol_id = s.id
+     WHERE b.label LIKE ?
+     ORDER BY b.label ASC
+     LIMIT 24`,
+    [`%${query}%`]
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    boardId: row.board_id,
+    label: row.label,
+    vocalization: row.vocalization,
+    symbolId: row.symbol_id,
+    action: row.action as Button["action"],
+    targetBoardId: row.target_board_id,
+    position: row.position,
+    bgColor: row.bg_color,
+    imagePath: row.arasaac_id ? getSymbolImageUrl(row.arasaac_id) : null,
+  }));
+}
+
 export async function insertButton(button: Button): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
@@ -59,4 +84,13 @@ export async function insertButton(button: Button): Promise<void> {
       button.bgColor,
     ]
   );
+}
+
+export async function getButtonCountForBoard(boardId: string): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM buttons WHERE board_id = ?",
+    [boardId]
+  );
+  return row?.count ?? 0;
 }

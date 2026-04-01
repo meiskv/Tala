@@ -2,7 +2,7 @@ import "../global.css";
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { useColorScheme, View, Text, ActivityIndicator } from "react-native";
@@ -12,22 +12,34 @@ import "react-native-reanimated";
 import { getDatabase } from "@/db/database";
 import { needsSeeding, seedDatabase, markAsSeeded } from "@/db/seed";
 import { useProfileStore } from "@/shared/hooks/useProfileStore";
+import { useThemeStore } from "@/shared/hooks/useThemeStore";
 import { getActiveProfile } from "@/db/queries/profileQueries";
+import { storage, StorageKeys } from "@/db/storage";
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const systemColorScheme = useColorScheme();
+  const themeMode = useThemeStore((s) => s.mode);
   const [isReady, setIsReady] = useState(false);
   const [seedProgress, setSeedProgress] = useState("");
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const setActiveProfile = useProfileStore((s) => s.setActiveProfile);
 
+  const resolvedScheme =
+    themeMode === "system" ? (systemColorScheme ?? "light") : themeMode;
+
   useEffect(() => {
-    ScreenOrientation.lockAsync(
-      ScreenOrientation.OrientationLock.LANDSCAPE
-    );
+    const orientPref = storage.getString(StorageKeys.ORIENTATION_LOCK) ?? "landscape";
+    if (orientPref === "landscape") {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+    } else if (orientPref === "portrait") {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+    } else {
+      ScreenOrientation.unlockAsync();
+    }
   }, []);
 
   useEffect(() => {
@@ -48,6 +60,11 @@ export default function RootLayout() {
           setActiveProfile(profile);
         }
 
+        const hasOnboarded = storage.getBoolean(StorageKeys.HAS_ONBOARDED);
+        if (!hasOnboarded) {
+          setNeedsOnboarding(true);
+        }
+
         setIsReady(true);
       } catch (error) {
         console.error("Initialization error:", error);
@@ -58,6 +75,12 @@ export default function RootLayout() {
     initialize();
   }, [setActiveProfile]);
 
+  useEffect(() => {
+    if (isReady && needsOnboarding) {
+      router.replace("/onboarding");
+    }
+  }, [isReady, needsOnboarding]);
+
   if (!isReady) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -66,14 +89,14 @@ export default function RootLayout() {
             flex: 1,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#FFF",
+            backgroundColor: resolvedScheme === "dark" ? "#121212" : "#FFF",
           }}
         >
           <ActivityIndicator size="large" color="#4FC3F7" />
-          <Text style={{ marginTop: 16, fontSize: 18, color: "#333", fontWeight: "600" }}>
-            AAC
+          <Text style={{ marginTop: 16, fontSize: 18, color: resolvedScheme === "dark" ? "#E0E0E0" : "#333", fontWeight: "600" }}>
+            Tala AAC
           </Text>
-          <Text style={{ marginTop: 8, fontSize: 14, color: "#999" }}>
+          <Text style={{ marginTop: 8, fontSize: 14, color: resolvedScheme === "dark" ? "#777" : "#999" }}>
             {seedProgress || "Initializing..."}
           </Text>
         </View>
@@ -84,12 +107,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={resolvedScheme === "dark" ? DarkTheme : DefaultTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="board/[id]" options={{ headerShown: true }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           </Stack>
-          <StatusBar style="auto" />
+          <StatusBar style={resolvedScheme === "dark" ? "light" : "dark"} />
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
